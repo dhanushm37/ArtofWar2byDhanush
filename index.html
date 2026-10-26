@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stickman Tower Clash</title>
+    <style>
+        :root {
+            --ally-blue: #2563eb;
+            --enemy-red: #dc2626;
+            --bg-color: #1e293b;
+            --panel-bg: #0f172a;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: #f8fafc;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        header {
+            margin: 15px 0;
+            text-align: center;
+            position: relative;
+            width: 100%;
+        }
+        h1 { margin: 0; font-size: 24px; color: #38bdf8; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+        
+        /* Info Button & Modal */
+        #info-btn {
+            position: absolute;
+            right: 20px;
+            top: 0;
+            background: #3b82f6;
+            border: none;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            transition: transform 0.2s;
+        }
+        #info-btn:hover { transform: scale(1.1); }
+
+        #modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+        }
+        #modal-content {
+            background: var(--panel-bg);
+            padding: 25px;
+            border-radius: 12px;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            border: 2px solid #38bdf8;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+        #modal-content h2 { margin-top: 0; color: #38bdf8; }
+        .close-modal {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            float: right;
+            font-weight: bold;
+        }
+
+        /* Container Phases */
+        .game-container {
+            width: 95%;
+            max-width: 1000px;
+            background: var(--panel-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Phase 1: Setup UI */
+        #setup-phase { width: 100%; display: flex; flex-direction: column; align-items: center; }
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(6, 60px);
+            grid-template-rows: repeat(6, 60px);
+            gap: 6px;
+            margin: 15px 0;
+            background: rgba(37, 99, 235, 0.15);
+            padding: 10px;
+            border: 2px dashed var(--ally-blue);
+            border-radius: 8px;
+        }
+        .slot {
+            width: 60px;
+            height: 60px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            font-size: 11px;
+            text-align: center;
+            transition: background 0.2s, border-color 0.2s;
+            position: relative;
+        }
+        .slot:hover { background: rgba(56, 189, 248, 0.2); border-color: #38bdf8; }
+        .slot.filled { background: rgba(37, 99, 235, 0.4); border-color: var(--ally-blue); }
+
+        .controls-panel {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin: 15px 0;
+            background: rgba(0,0,0,0.2);
+            padding: 15px;
+            border-radius: 8px;
+            width: 100%;
+        }
+        button.action-btn {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+        button.action-btn:hover { background: #1d4ed8; }
+        button.success-btn { background: #16a34a; }
+        button.success-btn:hover { background: #15803d; }
+
+        select, input {
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid #475569;
+            background: #1e293b;
+            color: white;
+        }
+
+        /* Phase 2 & 3: Preview & Battle Canvas */
+        #canvas-container {
+            position: relative;
+            width: 100%;
+            height: 450px;
+            background: linear-gradient(to bottom, #7dd3fc 0%, #bae6fd 60%, #86efac 60%, #4ade80 100%);
+            border-radius: 8px;
+            overflow: hidden;
+            display: none;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.3);
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .battle-hud {
+            display: none;
+            width: 100%;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+            padding: 0 10px;
+        }
+        .hp-bar-container {
+            width: 200px;
+            background: #334155;
+            height: 18px;
+            border-radius: 9px;
+            overflow: hidden;
+            border: 1px solid #64748b;
+        }
+        .hp-fill { height: 100%; transition: width 0.3s; }
+        #ally-hp-fill { background: var(--ally-blue); width: 100%; }
+        #enemy-hp-fill { background: var(--enemy-red); width: 100%; }
+
+        .shortcuts-box {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Stickman Tower Clash</h1>
+        <button id="info-btn" onclick="toggleModal()">i</button>
+    </header>
+
+    <div class="game-container">
+        <!-- SETUP PHASE -->
+        <div id="setup-phase">
+            <h3>Ally Deployment Region (6x6 Slots)</h3>
+            <p style="font-size: 13px; color: #94a3b8; margin-top: 0;">Click slots to place/upgrade troops. Same type + level merges!</p>
+            
+            <div class="shortcuts-box">
+                <span>Row Shortcut:</span>
+                <select id="shortcut-row">
+                    <option value="0">Row 1</option>
+                    <option value="1">Row 2</option>
+                    <option value="2">Row 3</option>
+                    <option value="3">Row 4</option>
+                    <option value="4">Row 5</option>
+                    <option value="5">Row 6</option>
+                </select>
+                <select id="shortcut-type">
+                    <option value="Swordsmen">Swordsmen</option>
+                    <option value="Archer">Archer</option>
+                    <option value="Spearmen Guard">Spearmen Guard</option>
+                    <option value="Catapult">Catapult</option>
+                    <option value="Magician">Magician</option>
+                </select>
+                <select id="shortcut-level">
+                    <option value="1">Level 1</option>
+                    <option value="2">Level 2</option>
+                    <option value="3">Level 3</option>
+                </select>
+                <button class="action-btn" onclick="fillRowShortcut()">Fill Row</button>
+            </div>
+
+            <div class="grid-container" id="ally-grid"></div>
+
+            <div class="controls-panel">
+                <div>
+                    <label>Selected Troop: </label>
+                    <select id="troop-select">
+                        <option value="Swordsmen">Swordsmen</option>
+                        <option value="Archer">Archer</option>
+                        <option value="Spearmen Guard">Spearmen Guard</option>
+                        <option value="Catapult">Catapult</option>
+                        <option value="Magician">Magician</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Level (1-10): </label>
+                    <input type="number" id="level-select" min="1" max="10" value="1" style="width: 60px;">
+                </div>
+                <button class="action-btn success-btn" id="okay-btn" onclick="proceedToPreview()">Okay (Ready)</button>
+            </div>
+        </div>
+
+        <!-- BATTLE PREVIEW & CANVAS PHASE -->
+        <div id="canvas-container">
+            <canvas id="battleCanvas" width="1000" height="450"></canvas>
+        </div>
+
+        <div class="battle-hud" id="battle-hud">
+            <div>
+                <strong>Ally Tower HP:</strong> <span id="ally-hp-text">50000</span>
+                <div class="hp-bar-container"><div id="ally-hp-fill" class="hp-fill"></div></div>
+            </div>
+            <div>
+                <button class="action-btn success-btn" id="start-battle-btn" onclick="startBattle()" style="display: none;">START BATTLE</button>
+                <button class="action-btn" id="restart-btn" onclick="resetGame()" style="display: none;">Play Again</button>
+            </div>
+            <div style="text-align: right;">
+                <strong>Enemy Tower HP:</strong> <span id="enemy-hp-text">50000</span>
+                <div class="hp-bar-container"><div id="enemy-hp-fill" class="hp-fill"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- INFO MODAL -->
+    <div id="modal" onclick="if(event.target === this) toggleModal();">
+        <div id="modal-content">
+            <button class="close-modal" onclick="toggleModal()">X</button>
+            <h2>Game Guide & CDP Data</h2>
+            <p><strong>How to Play:</strong> Deploy your 5 types of stickman troops in your 6x6 blue region. Combine identical troops and levels to upgrade them up to Level 10. Click 'Okay' to view the battlefield, then 'START' to battle the enemy red tower!</p>
+            <hr style="border-color: #334155;">
+            <h3>Troop Types & Mechanics:</h3>
+            <ul>
+                <li><strong>Swordsmen:</strong> Close-range fighters with sword & helmet.</li>
+                <li><strong>Archer:</strong> Ranged unit with arrows that fade in flight and curve over distance.</li>
+                <li><strong>Spearmen Guard:</strong> Heavy defense unit with Spartan helmet, shield, and waving scarf.</li>
+                <li><strong>Catapult:</strong> Siege unit launching massive burning rocks with torch ignition. Excess damage splashes to nearby enemies!</li>
+                <li><strong>Magician:</strong> Unique mystic unit summoning a cloud with a wand to strike enemies with lightning. Excess damage splashes!</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // CDP Data definitions
+        const CDP = {
+            "Swordsmen": {
+                HP: [1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000, 6000],
+                ATP: [100, 200, 300, 400, 500, 600, 700, 800, 900, 1020],
+                DEF: [18, 26, 34, 42, 50, 58, 66, 74, 82, 90],
+                COUNT: [3, 5, 7, 9, 9, 9, 9, 9, 9, 9],
+                ATS: 1.0
+            },
+            "Archer": {
+                HP: [800, 1300, 1800, 2300, 2800, 3300, 3800, 4300, 4800, 6000],
+                ATP: [180, 280, 380, 480, 580, 680, 780, 880, 980, 1100],
+                DEF: [15, 22, 29, 36, 43, 50, 57, 64, 71, 78],
+                COUNT: [3, 5, 7, 9, 9, 9, 9, 9, 9, 9],
+                ATS: 1.1
+            },
+            "Spearmen Guard": {
+                HP: [2000, 2500, 3000, 3500, 4000, 4500, 5000, 5500, 6000, 7000],
+                ATP: [250, 350, 450, 550, 650, 750, 850, 950, 1050, 1240],
+                DEF: [20, 30, 40, 50, 60, 70, 80, 90, 100, 110],
+                COUNT: [3, 5, 7, 9, 9, 9, 9, 9, 9, 9],
+                ATS: 1.5
+            },
+            "Catapult": {
+                HP: [7000, 13000, 22000, 33000, 37000, 41000, 45000, 49000, 53000, 60000],
+                ATP: [500, 700, 900, 1300, 1700, 2100, 2700, 3300, 3900, 5000],
+                DEF: [40, 50, 60, 70, 80, 90, 100, 110, 120, 130],
+                COUNT: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                ATS: 3.0
+            },
+            "Magician": {
+                HP: [14000, 26000, 44000, 66000, 74000, 82000, 90000, 98000, 106000, 125000],
+                ATP: [1500, 2100, 2700, 3900, 5100, 6300, 8100, 9900, 11700, 15000],
+                DEF: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                COUNT: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                ATS: 5.0
+            }
+        };
+
+        // Ally Grid State (6x6)
+        let allyGridData = Array(6).fill(null).map(() => Array(6).fill(null));
+
+        function toggleModal() {
+            const modal = document.getElementById('modal');
+            modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
+        }
+
+        // Initialize Grid UI
+        function initGrid() {
+            const gridEl = document.getElementById('ally-grid');
+            gridEl.innerHTML = '';
+            for (let r = 0; r < 6; r++) {
+                for (let c = 0; c < 6; c++) {
+                    const slot = document.createElement('div');
+                    slot.className = 'slot';
+                    slot.dataset.row = r;
+                    slot.dataset.col = c;
+                    slot.onclick = () => handleSlotClick(r, c);
+                    updateSlotUI(slot, allyGridData[r][c]);
+                    gridEl.appendChild(slot);
+                }
+            }
+        }
+
+        function updateSlotUI(slotEl, data) {
+            if (data) {
+                slotEl.classList.add('filled');
+                slotEl.innerHTML = `<strong>${data.type.substring(0,4)}</strong><br>Lvl ${data.level}`;
+            } else {
+                slotEl.classList.remove('filled');
+                slotEl.innerHTML = `<span style="color:#64748b;">Empty</span>`;
+            }
+        }
+
+        function handleSlotClick(r, c) {
+            const type = document.getElementById('troop-select').value;
+            const level = parseInt(document.getElementById('level-select').value);
+
+            let current = allyGridData[r][c];
+            if (current && current.type === type && current.level === level && level < 10) {
+                // Merge logic
+                current.level += 1;
+            } else {
+                allyGridData[r][c] = { type, level };
+            }
+            initGrid();
+        }
+
+        function fillRowShortcut() {
+            const row = parseInt(document.getElementById('shortcut-row').value);
+            const type = document.getElementById('shortcut-type').value;
+            const level = parseInt(document.getElementById('shortcut-level').value);
+            for (let c = 0; c < 6; c++) {
+                allyGridData[row][c] = { type, level };
+            }
+            initGrid();
+        }
+
+        // Canvas & Battle State
+        let canvas = document.getElementById('battleCanvas');
+        let ctx = canvas.getContext('2d');
+        let gameState = 'SETUP'; // SETUP, PREVIEW, BATTLE, OVER
+        let allyUnits = [];
+        let enemyUnits = [];
+        let projectiles = [];
+        let effects = [];
+        let maxAllyTowerHp = 50000;
+        let maxEnemyTowerHp = 50000;
+        let allyTowerHp = 50000;
+        let enemyTowerHp = 50000;
+
+        function proceedToPreview() {
+            document.getElementById('setup-phase').style.display = 'none';
+            document.getElementById('canvas-container').style.display = 'block';
+            document.getElementById('battle-hud').style.display = 'flex';
+            document.getElementById('start-battle-btn').style.display = 'inline-block';
+            gameState = 'PREVIEW';
+            drawScene();
+        }
+
+        function resetGame() {
+            allyGridData = Array(6).fill(null).map(() => Array(6).fill(null));
+            initGrid();
+            document.getElementById('setup-phase').style.display = 'flex';
+            document.getElementById('canvas-container').style.display = 'none';
+            document.getElementById('battle-hud').style.display = 'none';
+            document.getElementById('start-battle-btn').style.display = 'none';
+            document.getElementById('restart-btn').style.display = 'none';
+            allyTowerHp = maxAllyTowerHp;
+            enemyTowerHp = maxEnemyTowerHp;
+            gameState = 'SETUP';
+        }
+
+        function startBattle() {
+            document.getElementById('start-battle-btn').style.display = 'none';
+            gameState = 'BATTLE';
+            spawnArmies();
+            requestAnimationFrame(battleLoop);
+        }
+
+        function spawnArmies() {
+            allyUnits = [];
+            enemyUnits = [];
+            projectiles = [];
+            effects = [];
+
+            // Convert grid data to active battle units
+            for (let r = 0; r < 6; r++) {
+                for (let c = 0; c < 6; c++) {
+                    let troop = allyGridData[r][c];
+                    if (troop) {
+                        allyUnits.push(createUnit(troop.type, troop.level, true, 120 + c * 18, 150 + r * 45));
+                    }
+                    // Generate basic AI enemy counter units
+                    let enemyTypes = ["Swordsmen", "Archer", "Spearmen Guard", "Catapult", "Magician"];
+                    let randomType = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
+                    enemyUnits.push(createUnit(randomType, Math.min(5, Math.floor(Math.random()*3)+1), false, 820 - c * 18, 150 + r * 45));
+                }
+            }
+        }
+
+        function createUnit(type, level, isAlly, x, y) {
+            let stats = CDP[type];
+            let lvlIdx = level - 1;
+            return {
+                type,
+                level,
+                isAlly,
+                x,
+                y,
+                baseY: y,
+                hp: stats.HP[lvlIdx],
+                maxHp: stats.HP[lvlIdx],
+                atp: stats.ATP[lvlIdx],
+                def: stats.DEF[lvlIdx],
+                count: stats.COUNT[lvlIdx],
+                ats: stats.ATS,
+                attackTimer: Math.random() * 2,
+                animTimer: 0
+            };
+        }
+
+        function drawBackground() {
+            // Sky & Noon Sun
+            ctx.fillStyle = '#38bdf8';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = '#fef08a';
+            ctx.beginPath();
+            ctx.arc(800, 80, 45, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Hills & Scenery
+            ctx.fillStyle = '#15803d';
+            ctx.beginPath();
+            ctx.moveTo(0, 320);
+            ctx.quadraticCurveTo(250, 200, 500, 320);
+            ctx.quadraticCurveTo(750, 180, 1000, 320);
+            ctx.lineTo(1000, 450);
+            ctx.lineTo(0, 450);
+            ctx.fill();
+
+            // Trees
+            ctx.fillStyle = '#166534';
+            [100, 250, 650, 850].forEach(tx => {
+                ctx.fillRect(tx - 6, 280, 12, 50);
+                ctx.beginPath();
+                ctx.arc(tx, 270, 22, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Ally Tower (Blue with Flag)
+            ctx.fillStyle = '#1e3a8a';
+            ctx.fillRect(30, 200, 60, 150);
+            ctx.fillStyle = varColor('--ally-blue');
+            ctx.fillRect(55, 140, 10, 60); // Flag pole
+            ctx.fillStyle = '#3b82f6';
+            ctx.beginPath();
+            ctx.moveTo(65, 140); ctx.lineTo(95, 155); ctx.lineTo(65, 170); ctx.fill();
+
+            // Enemy Tower (Red with Flag)
+            ctx.fillStyle = '#991b1b';
+            ctx.fillRect(910, 200, 60, 150);
+            ctx.fillStyle = '#7f1d1d';
+            ctx.fillRect(935, 140, 10, 60);
+            ctx.fillStyle = '#ef4444';
+            ctx.beginPath();
+            ctx.moveTo(935, 140); ctx.lineTo(905, 155); ctx.lineTo(935, 170); ctx.fill();
+        }
+
+        function varColor(name) {
+            return name === '--ally-blue' ? '#2563eb' : '#dc2626';
+        }
+
+        function drawScene() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawBackground();
+
+            // Draw Units
+            [...allyUnits, ...enemyUnits].forEach(u => drawStickman(u));
+
+            // Draw Projectiles
+            projectiles.forEach(p => {
+                ctx.fillStyle = p.color || '#000';
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius || 4, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Draw Effects (Lightning / Magic / Explosions)
+            effects.forEach(e => {
+                if (e.type === 'lightning') {
+                    ctx.strokeStyle = '#fde047';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.moveTo(e.x, e.y - 150);
+                    ctx.lineTo(e.x - 10, e.y - 75);
+                    ctx.lineTo(e.x + 10, e.y - 40);
+                    ctx.lineTo(e.x, e.y);
+                    ctx.stroke();
+                }
+            });
+        }
+
+        function drawStickman(u) {
+            ctx.strokeStyle = u.isAlly ? '#1d4ed8' : '#b91c1c';
+            ctx.lineWidth = 3;
+            ctx.fillStyle = ctx.strokeStyle;
+
+            // Head
+            ctx.beginPath();
+            ctx.arc(u.x, u.y - 25, 8, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Helmet/Hat specs
+            if (u.type === 'Swordsmen') {
+                ctx.fillRect(u.x - 6, u.y - 35, 12, 4); // Small helmet
+                // Sword in hand
+                ctx.beginPath();
+                ctx.moveTo(u.x + 10, u.y - 15);
+                ctx.lineTo(u.x + 24, u.y - 25);
+                ctx.stroke();
+            } else if (u.type === 'Archer') {
+                // Bow & Arrow holder
+                ctx.strokeRect(u.x - 12, u.y - 30, 4, 25);
+            } else if (u.type === 'Spearmen Guard') {
+                ctx.fillRect(u.x - 8, u.y - 37, 16, 6); // Spartan helmet
+                // Spear & Shield
+                ctx.beginPath();
+                ctx.moveTo(u.x + 12, u.y - 30);
+                ctx.lineTo(u.x + 30, u.y - 10);
+                ctx.stroke();
+            } else if (u.type === 'Magician') {
+                // Wand & Hat
+                ctx.beginPath();
+                ctx.moveTo(u.x, u.y - 45); ctx.lineTo(u.x - 8, u.y - 35); ctx.lineTo(u.x + 8, u.y - 35); ctx.fill();
+            }
+
+            // Body
+            ctx.beginPath();
+            ctx.moveTo(u.x, u.y - 17);
+            ctx.lineTo(u.x, u.y + 5);
+            // Legs
+            ctx.moveTo(u.x, u.y + 5); ctx.lineTo(u.x - 8, u.y + 20);
+            ctx.moveTo(u.x, u.y + 5); ctx.lineTo(u.x + 8, u.y + 20);
+            // Arms
+            ctx.moveTo(u.x, u.y - 10); ctx.lineTo(u.x - 10, u.y);
+            ctx.moveTo(u.x, u.y - 10); ctx.lineTo(u.x + 10, u.y);
+            ctx.stroke();
+
+            // HP Mini-bar
+            ctx.fillStyle = '#334155';
+            ctx.fillRect(u.x - 15, u.y - 48, 30, 4);
+            ctx.fillStyle = u.isAlly ? '#3b82f6' : '#ef4444';
+            ctx.fillRect(u.x - 15, u.y - 48, 30 * (u.hp / u.maxHp), 4);
+        }
+
+        function battleLoop(timestamp) {
+            if (gameState !== 'BATTLE') return;
+
+            // Update Unit Positions & Combat
+            [...allyUnits, ...enemyUnits].forEach(u => {
+                u.animTimer += 0.05;
+                // Move towards center or opponent
+                if (u.isAlly && u.x < 850) u.x += 0.4;
+                if (!u.isAlly && u.x > 150) u.x -= 0.4;
+
+                // Attack logic
+                u.attackTimer += 0.016;
+                if (u.attackTimer >= u.ats) {
+                    u.attackTimer = 0;
+                    performAttack(u);
+                }
+            });
+
+            // Update Projectiles
+            projectiles.forEach((p, idx) => {
+                p.x += p.vx;
+                p.y += p.vy;
+                if (p.x < 50 || p.x > 950) projectiles.splice(idx, 1);
+            });
+
+            // Clean up dead units
+            allyUnits = allyUnits.filter(u => u.hp > 0);
+            enemyUnits = enemyUnits.filter(u => u.hp > 0);
+
+            // Tower Damage checks
+            allyUnits.forEach(u => {
+                if (u.x >= 900) enemyTowerHp -= u.atp * 0.05;
+            });
+            enemyUnits.forEach(u => {
+                if (u.x <= 100) allyTowerHp -= u.atp * 0.05;
+            });
+
+            updateHUD();
+
+            drawScene();
+
+            if (allyTowerHp <= 0 || enemyTowerHp <= 0) {
+                gameState = 'OVER';
+                alert(allyTowerHp <= 0 ? "Enemy Victory!" : "Ally Victory!");
+                document.getElementById('restart-btn').style.display = 'inline-block';
+                return;
+            }
+
+            requestAnimationFrame(battleLoop);
+        }
+
+        function performAttack(u) {
+            let targets = u.isAlly ? enemyUnits : allyUnits;
+            if (targets.length === 0) return;
+            let target = targets[0];
+
+            if (u.type === 'Archer') {
+                projectiles.push({
+                    x: u.x, y: u.y - 20,
+                    vx: u.isAlly ? 6 : -6,
+                    vy: -1,
+                    radius: 3,
+                    color: '#f8fafc'
+                });
+                target.hp -= Math.max(10, u.atp - target.def);
+            } else if (u.type === 'Catapult') {
+                let damage = Math.max(20, u.atp - target.def);
+                target.hp -= damage;
+                // Splash excess damage to nearby
+                targets.forEach(t => {
+                    if (t !== target && Math.abs(t.x - target.x) < 40) {
+                        t.hp -= damage * 0.3;
+                    }
+                });
+            } else if (u.type === 'Magician') {
+                effects.push({ type: 'lightning', x: target.x, timer: 30 });
+                let damage = Math.max(50, u.atp);
+                target.hp -= damage;
+            } else {
+                target.hp -= Math.max(5, u.atp - target.def);
+            }
+        }
+
+        function updateHUD() {
+            document.getElementById('ally-hp-text').innerText = Math.max(0, Math.floor(allyTowerHp));
+            document.getElementById('enemy-hp-text').innerText = Math.max(0, Math.floor(enemyTowerHp));
+            document.getElementById('ally-hp-fill').style.width = Math.max(0, (allyTowerHp / maxAllyTowerHp) * 100) + '%';
+            document.getElementById('enemy-hp-fill').style.width = Math.max(0, (enemyTowerHp / maxEnemyTowerHp) * 100) + '%';
+        }
+
+        // Initialize grid on load
+        initGrid();
+    </script>
+</body>
+</html>
